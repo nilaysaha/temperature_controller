@@ -1,0 +1,17 @@
+{
+  "name": "exams",
+  "version": "1.0.0",
+  "description": "temperature controller",
+  "main": "set_temp.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "mqtt"
+  ],
+  "author": "Nilay saha",
+  "license": "ISC",
+  "dependencies": {
+    "mqtt": "^4.1.0"
+  }
+}
