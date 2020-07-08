@@ -3,11 +3,18 @@
 const mqtt = require('mqtt')
 const broker = 'mqtt://test.mosquitto.org';  
 const client = mqtt.connect(broker);
-
+const program = require('commander')
 
 /*MQTT CHANNELS or TOPICS*/
 CT_CHANNEL='/readings/temperature'
 TS_CHANNEL='/actuators/room-1'
+
+/*constants*/
+INIT_SETTING_TEMP_SENSOR = 18
+ROOM_TEMPERATURE=23.5
+UPPER_TEMP_DIFF_LIMIT=10 //we will fully open value for temp diff(target - current > 10)
+LOWER_TEMP_DIFF_LIMIT=0.00001
+
 
 const publish_CT = (current_temp) => {
    var packet = {
@@ -19,17 +26,17 @@ const publish_CT = (current_temp) => {
 }
 
 
-const mqtt_handler = (set_temp = ROOM_TEMPERATURE) => {
+const mqtt_handler = (set_temp = ROOM_TEMPERATURE, initial_temp = INIT_SETTING_TEMP_SENSOR) => {
     a = new Controller(set_temp)
-    b = new Boiler(INIT_SETTING_TEMP_SENSOR)
+    b = new Boiler(initial_temp)
 
     client.on('connect', function () {
 	client.subscribe(CT_CHANNEL)
 	client.subscribe(TS_CHANNEL)
 	
 	//trigger feedback loop
-	console.log(`publishing ${INIT_SETTING_TEMP_SENSOR} on channel:${CT_CHANNEL}`)
-	publish_CT(INIT_SETTING_TEMP_SENSOR)
+	console.log(`publishing ${initial_temp} on channel:${CT_CHANNEL}`)
+	publish_CT(initial_temp)
     })
 
     client.on('message', async (topic, message) => {
@@ -52,10 +59,6 @@ const mqtt_handler = (set_temp = ROOM_TEMPERATURE) => {
 	
     })
 } 
-
-ROOM_TEMPERATURE=23.5
-UPPER_TEMP_DIFF_LIMIT=10 //we will fully open value for temp diff(target - current > 10)
-LOWER_TEMP_DIFF_LIMIT=0.00001
 
 
 class Controller{
@@ -118,8 +121,6 @@ BOILER_VALVE_MAX_LEVEL=100
 BOILER_VALVE_MIN_LEVEL=0
 
 TEMP_STABILITY_TIME=20000 //10s. Ideally a variable but we take as constant.
-INIT_SETTING_TEMP_SENSOR = 18
-
 TEMP_STABILITY_DIFF=0.0001 /*when diff between target and actual temp is lower than this value, switch off the boiler or close the valve.*/
 
 /*This represents the boiler and it receives instructions via valve opening level*/
@@ -184,5 +185,13 @@ class Boiler{
 
 
 if (require.main === module){
-    mqtt_handler()
+    program
+	.option('-t, --targetTemp <number>', 'Set the target temperature of the room', parseFloat, ROOM_TEMPERATURE)
+	.option('-i, --initTemp <number>', 'Set the initial temperature of the room', parseFloat, INIT_SETTING_TEMP_SENSOR)
+
+    program.parse(process.argv);
+
+    console.log(`target temp: ${program.targetTemp} and initial temp:${program.initTemp}`)
+
+    mqtt_handler(program.targetTemp, program.initTemp)
 }
